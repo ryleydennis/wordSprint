@@ -23,15 +23,13 @@ public class BookParser {
   }
   protected List<String[]> parse (String location) throws IOException {
 
-    //location = "/sdcard/Books/WordSprint/(Prince of Nothing Book 2) R. Scott Bakker-Prince of Nothing 2 The Warrior Prophet-Overlook Press (2008)/The_Warrior_Prophet_split_061.html";
-
-    List<String[]> unformattedText = new ArrayList<String[]>();
+    List<String[]> unformattedText = new ArrayList<>();
 
     AssetManager am = mContext.getAssets();
 
     try {
 
-      InputStream is = mContext.getAssets().open("The_Warrior_Prophet_split_068.html");
+      InputStream is = mContext.getAssets().open("PrideAndPrejudiceChapter7.html");
       BufferedReader reader = new BufferedReader((new InputStreamReader(is)));
       String line;
 
