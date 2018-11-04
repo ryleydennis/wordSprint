@@ -5,6 +5,7 @@ import android.content.res.AssetManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Environment;
+import android.util.Log;
 
 import com.github.mertakdut.BookSection;
 import com.github.mertakdut.Reader;
@@ -41,16 +42,21 @@ public class BookParser {
     reader.setIsOmittingTitleTag(true);
 
     List<String[]> parsedBook = new ArrayList<>();
-    //Each section is a chapter at maximum, so loop through and get all chapters
     //TODO change from 10 to get all chapters
-    for(int i = 0; i < 10; i++) {
-      BookSection bookSection = reader.readSection(i);
-      String sectionContent = bookSection.getSectionTextContent();
+    try{
+      for(int i = 0; i < 10; i++) {
+        BookSection bookSection = reader.readSection(i);
+        String sectionContent = bookSection.getSectionTextContent();
 
-      String[] parsedSection =  sectionContent.split("\\s+");
+        String[] parsedSection =  sectionContent.split("\\s+");
+        Log.d("Parser","section " + String.valueOf(i));
 
 
-      parsedBook.add(parsedSection);
+        parsedBook.add(parsedSection);
+      }
+    }
+    catch (OutOfPagesException e){
+      Log.d("Parser","Read Entire Book");
     }
 
     return parsedBook;

@@ -11,6 +11,7 @@ import android.view.animation.AlphaAnimation;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.github.mertakdut.exception.OutOfPagesException;
 import com.github.mertakdut.exception.ReadingException;
@@ -20,16 +21,21 @@ import java.util.List;
 
 public class ReaderView extends AppCompatActivity {
 
-  TextView wordTrack;
+
+  Button skipNextButton;
+  Button skipBackButton;
+  Button ff_Button;
+  Button rw_Button;
   Button playButton;
+  TextView wpmTextView;
   SeekBar wpmSlider;
   Book parsedBook;
   CountDownTimer playerTimer;
-  TextView wpmTextView;
   ConstraintLayout uiGroup;
   ConstraintLayout previewGroupTop;
   ConstraintLayout previewGroupBottom;
 
+  TextView wordTrack;
   TextView wordPreview1;
   TextView wordPreview2;
   TextView wordPreview3;
@@ -77,7 +83,7 @@ public class ReaderView extends AppCompatActivity {
     parsedBook.getParsedBook().remove(0);
 
     bindViews();
-    setUpPlayButton();
+    setUpButtons();
     setUpSeekBar();
     initAnimations();
     updatePreviewGroups();
@@ -129,7 +135,6 @@ public class ReaderView extends AppCompatActivity {
       playButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
       uiGroup.startAnimation(fadeInHalfAnim);
       wordTrack.bringToFront();
-
       updatePreviewGroups();
       previewGroupTop.startAnimation(fadeInAnim);
       previewGroupBottom.startAnimation(fadeInAnim);
@@ -152,7 +157,8 @@ public class ReaderView extends AppCompatActivity {
     }
   }
 
-  private void setUpPlayButton(){
+
+  private void setUpButtons(){
     playButton.setOnClickListener( v -> {
       if(isPlaying){
         stopPlayer();
@@ -161,9 +167,72 @@ public class ReaderView extends AppCompatActivity {
         startPlayer();
       }
     });
+
+    skipNextButton.setOnClickListener( v -> {
+      if(parsedBook.getParsedBook().size() > sectionPosition) {
+        sectionPosition++;
+        wordPosition = 0;
+        updatePreviewGroups();
+        updateWordTrack();
+      }
+      else{
+        Toast.makeText(this, "End of Book", Toast.LENGTH_SHORT).show();
+      }
+    });
+
+    skipBackButton.setOnClickListener( v -> {
+      if(sectionPosition > 0) {
+
+        if(wordPosition != 0){
+          wordPosition = 0;
+        }
+        else{
+          sectionPosition--;
+        }
+        updatePreviewGroups();
+        updateWordTrack();
+      }
+      else{
+        Toast.makeText(this, "Beginning of Book", Toast.LENGTH_SHORT).show();
+      }
+    });
+
+    ff_Button.setOnClickListener( v -> {
+      if(parsedBook.getParsedBook().get(sectionPosition).length >= (wordPosition + 5)) {
+        wordPosition = wordPosition + 5;
+        updatePreviewGroups();
+        updateWordTrack();
+      }
+      else{
+        Toast.makeText(this, "End of Section", Toast.LENGTH_SHORT).show();
+      }
+    });
+
+    rw_Button.setOnClickListener( v -> {
+      if(wordPosition >= 5) {
+        wordPosition = wordPosition - 5;
+        updatePreviewGroups();
+        updateWordTrack();
+      }
+      else{
+        Toast.makeText(this, "Beginning of Section", Toast.LENGTH_SHORT).show();
+      }
+    });
+
+
+  }
+
+  private void updateWordTrack(){
+    if(wordPosition == 0){
+      wordTrack.setText("Press Play To Begin...");
+    }
+    else{
+    wordTrack.setText(parsedBook.getParsedBook().get(sectionPosition)[wordPosition]);
+    }
   }
 
   private void updatePreviewGroups(){
+
     if(wordPosition > 3) fillInPreviewText(wordPreview1, wordPosition - 4);
     else wordPreview1.setText("");
     if(wordPosition > 2) fillInPreviewText(wordPreview2, wordPosition - 3);
@@ -250,6 +319,10 @@ public class ReaderView extends AppCompatActivity {
   }
 
   private void bindViews(){
+    skipNextButton = findViewById(R.id.skipNext_button);
+    skipBackButton = findViewById(R.id.skipBack_button);
+    rw_Button = findViewById(R.id.rw_button);
+    ff_Button = findViewById(R.id.ff_button);
     wordTrack = findViewById(R.id.wordTrackView);
     playButton = findViewById(R.id.play_button);
     wpmSlider = findViewById(R.id.seekBar);
