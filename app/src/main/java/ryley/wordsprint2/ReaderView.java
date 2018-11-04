@@ -1,10 +1,14 @@
 package ryley.wordsprint2;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -18,6 +22,7 @@ import java.util.List;
 public class ReaderView extends AppCompatActivity {
 
   TextView wordTrack;
+  ImageView transparentView;
   Button playButton;
   SeekBar wpmSlider;
   Book parsedBook;
@@ -43,6 +48,7 @@ public class ReaderView extends AppCompatActivity {
     playButton = findViewById(R.id.play_button);
     wpmSlider = findViewById(R.id.seekBar);
     wpmTextView = findViewById(R.id.WPM_Textview);
+    transparentView = findViewById(R.id.transparent_screen);
 
     BookParser bookparser = new BookParser(this);
 
@@ -52,9 +58,9 @@ public class ReaderView extends AppCompatActivity {
       e.printStackTrace();
     }
 
+    //TODO find better way to remove intro chapters
     parsedBook.getParsedBook().remove(0);
     parsedBook.getParsedBook().remove(0);
-
 
     setUpPlayButton();
     setUpSeekBar();
@@ -62,6 +68,10 @@ public class ReaderView extends AppCompatActivity {
   }
 
   private void setUpSeekBar(){
+    wpmSlider.getProgressDrawable().setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN);
+    wpmSlider.getThumb().setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN);
+    wpmSlider.setThumb(getDrawable(R.drawable.ic_adjust_black_24dp));
+
     wpmSlider.setMax(450);
     wpmSlider.setProgress(DEFAULT_WPM - 50);
     wpmSlider.setOnSeekBarChangeListener(
@@ -99,7 +109,10 @@ public class ReaderView extends AppCompatActivity {
   private void stopPlayer(){
     if(isPlaying){
       playerTimer.cancel();
-      playButton.setText("Play");
+      playButton.setBackgroundResource(R.drawable.ic_play_arrow);
+      playButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+      wordTrack.bringToFront();
+      transparentView.setVisibility(View.GONE);
       isPlaying = false;
     }
   }
@@ -108,7 +121,10 @@ public class ReaderView extends AppCompatActivity {
     if(!isPlaying){
       setUpTimer(parsedBook, wordPosition, linePosition, wpmInMilli);
       playerTimer.start();
-      playButton.setText("Pause");
+      wordTrack.bringToFront();
+      playButton.setBackgroundResource(R.drawable.ic_pause_button);
+      playButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+      transparentView.setVisibility(View.VISIBLE);
       isPlaying = true;
     }
   }
@@ -126,15 +142,15 @@ public class ReaderView extends AppCompatActivity {
 
   private void setUpTimer(Book parsedBook, final int wordPosition, final int linePosition, final int countDownInterval){
 
-    //warm up buffer = 5 + 4 + 3 + 2 + 1
-    final int WARM_UP_BUFFER = 15;
+    //warm up buffer = 3 + 2 + 1
+    final int WARM_UP_BUFFER = 6;
     long timerLength = parsedBook.size() + WARM_UP_BUFFER * countDownInterval;
 
 
     playerTimer = new CountDownTimer(timerLength, countDownInterval) {
 
-      int warmUpTickSkip = 5;
-      int warmUpTickGo = 5;
+      int warmUpTickSkip = 3;
+      int warmUpTickGo = 3;
       int currentLine = linePosition;
       int currentWord = wordPosition;
       List<String[]> parsedText = parsedBook.getParsedBook();

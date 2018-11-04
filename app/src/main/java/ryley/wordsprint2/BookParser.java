@@ -36,12 +36,13 @@ public class BookParser {
     File file = getFileFromAssets(location);
 
     Reader reader = new Reader();
-    reader.setMaxContentPerSection(1000000000);
     reader.setIsIncludingTextContent(true);
     reader.setFullContent(file.getPath());
     reader.setIsOmittingTitleTag(true);
 
     List<String[]> parsedBook = new ArrayList<>();
+    //Each section is a chapter at maximum, so loop through and get all chapters
+    //TODO change from 10 to get all chapters
     for(int i = 0; i < 10; i++) {
       BookSection bookSection = reader.readSection(i);
       String sectionContent = bookSection.getSectionTextContent();
