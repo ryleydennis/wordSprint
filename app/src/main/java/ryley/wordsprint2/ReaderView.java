@@ -5,37 +5,54 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.view.View;
+import android.view.animation.AlphaAnimation;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.github.mertakdut.exception.OutOfPagesException;
 import com.github.mertakdut.exception.ReadingException;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.List;
 
 public class ReaderView extends AppCompatActivity {
 
   TextView wordTrack;
-  ImageView transparentView;
   Button playButton;
   SeekBar wpmSlider;
   Book parsedBook;
   CountDownTimer playerTimer;
   TextView wpmTextView;
+  ConstraintLayout uiGroup;
+  ConstraintLayout previewGroupTop;
+  ConstraintLayout previewGroupBottom;
+
+  TextView wordPreview1;
+  TextView wordPreview2;
+  TextView wordPreview3;
+  TextView wordPreview4;
+  TextView wordPreview5;
+  TextView wordPreview6;
+  TextView wordPreview7;
+  TextView wordPreview8;
+
   boolean isPlaying = false;
-  int linePosition = 0;
+  int sectionPosition = 0;
   int wordPosition = 0;
   int wpmInMilli = 200;
 
   final int SEEK_BAR_PADDING = 50;
   final int ONE_WPM = 60000;
   final int DEFAULT_WPM = 300;
+
+  AlphaAnimation fadeOutHalfAnim = new AlphaAnimation(1.0f, 0.5f);
+  AlphaAnimation fadeInHalfAnim = new AlphaAnimation(0.5f, 1.0f);
+
+  AlphaAnimation fadeOutAnim = new AlphaAnimation(1.0f, 0.0f);
+  AlphaAnimation fadeInAnim = new AlphaAnimation(0.0f, 1.0f);
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -44,11 +61,8 @@ public class ReaderView extends AppCompatActivity {
 
     Intent intent = getIntent();
     String bookLoc = intent.getStringExtra("BOOK");
-    wordTrack = findViewById(R.id.wordTrackView);
-    playButton = findViewById(R.id.play_button);
-    wpmSlider = findViewById(R.id.seekBar);
-    wpmTextView = findViewById(R.id.WPM_Textview);
-    transparentView = findViewById(R.id.transparent_screen);
+
+
 
     BookParser bookparser = new BookParser(this);
 
@@ -62,9 +76,11 @@ public class ReaderView extends AppCompatActivity {
     parsedBook.getParsedBook().remove(0);
     parsedBook.getParsedBook().remove(0);
 
+    bindViews();
     setUpPlayButton();
     setUpSeekBar();
-
+    initAnimations();
+    updatePreviewGroups();
   }
 
   private void setUpSeekBar(){
@@ -111,20 +127,27 @@ public class ReaderView extends AppCompatActivity {
       playerTimer.cancel();
       playButton.setBackgroundResource(R.drawable.ic_play_arrow);
       playButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+      uiGroup.startAnimation(fadeInHalfAnim);
       wordTrack.bringToFront();
-      transparentView.setVisibility(View.GONE);
+
+      updatePreviewGroups();
+      previewGroupTop.startAnimation(fadeInAnim);
+      previewGroupBottom.startAnimation(fadeInAnim);
+
       isPlaying = false;
     }
   }
 
   private void startPlayer(){
     if(!isPlaying){
-      setUpTimer(parsedBook, wordPosition, linePosition, wpmInMilli);
+      setUpTimer(parsedBook, wordPosition, sectionPosition, wpmInMilli);
       playerTimer.start();
       wordTrack.bringToFront();
       playButton.setBackgroundResource(R.drawable.ic_pause_button);
       playButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
-      transparentView.setVisibility(View.VISIBLE);
+      uiGroup.startAnimation(fadeOutHalfAnim);
+      previewGroupTop.startAnimation(fadeOutAnim);
+      previewGroupBottom.startAnimation(fadeOutAnim);
       isPlaying = true;
     }
   }
@@ -138,6 +161,35 @@ public class ReaderView extends AppCompatActivity {
         startPlayer();
       }
     });
+  }
+
+  private void updatePreviewGroups(){
+    if(wordPosition > 3) fillInPreviewText(wordPreview1, wordPosition - 4);
+    else wordPreview1.setText("");
+    if(wordPosition > 2) fillInPreviewText(wordPreview2, wordPosition - 3);
+    else wordPreview2.setText("");
+    if(wordPosition > 1) fillInPreviewText(wordPreview3, wordPosition - 2);
+    else wordPreview3.setText("");
+    if(wordPosition > 0) fillInPreviewText(wordPreview4, wordPosition - 1);
+    else wordPreview4.setText("");
+
+    int remainingWords = parsedBook.getParsedBook().get(sectionPosition).length - wordPosition;
+    //If haven't started, show first word in preview instead of second
+    int startBuffer = (wordPosition == 0 ? -1 : 0);
+
+    if(remainingWords > 0) fillInPreviewText(wordPreview5, wordPosition + 1 + startBuffer);
+    else wordPreview5.setText("");
+    if(remainingWords > 1) fillInPreviewText(wordPreview6, wordPosition + 2 + startBuffer);
+    else wordPreview6.setText("");
+    if(remainingWords > 2) fillInPreviewText(wordPreview7, wordPosition + 3 + startBuffer);
+    else wordPreview7.setText("");
+    if(remainingWords > 3) fillInPreviewText(wordPreview8, wordPosition + 4 + startBuffer);
+    else wordPreview8.setText("");
+  }
+
+
+  private void fillInPreviewText(TextView preview, int position){
+    preview.setText(parsedBook.getParsedBook().get(sectionPosition)[position]);
   }
 
   private void setUpTimer(Book parsedBook, final int wordPosition, final int linePosition, final int countDownInterval){
@@ -193,7 +245,41 @@ public class ReaderView extends AppCompatActivity {
   }
 
   private void setBookPosition(int linePosition, int wordPosition){
-    this.linePosition = linePosition;
+    this.sectionPosition = linePosition;
     this.wordPosition = wordPosition;
+  }
+
+  private void bindViews(){
+    wordTrack = findViewById(R.id.wordTrackView);
+    playButton = findViewById(R.id.play_button);
+    wpmSlider = findViewById(R.id.seekBar);
+    wpmTextView = findViewById(R.id.WPM_Textview);
+    uiGroup = findViewById(R.id.ui_group);
+    previewGroupTop = findViewById(R.id.previewGroupTop);
+    previewGroupBottom = findViewById(R.id.previewGroupBottom);
+
+    wordPreview1 = findViewById(R.id.word_preview_1);
+    wordPreview2 = findViewById(R.id.word_preview_2);
+    wordPreview3 = findViewById(R.id.word_preview_3);
+    wordPreview4 = findViewById(R.id.word_preview_4);
+    wordPreview5 = findViewById(R.id.word_preview_5);
+    wordPreview6 = findViewById(R.id.word_preview_6);
+    wordPreview7 = findViewById(R.id.word_preview_7);
+    wordPreview8 = findViewById(R.id.word_preview_8);
+  }
+
+  private void initAnimations(){
+    fadeOutHalfAnim.setDuration(500);
+    fadeOutHalfAnim.setFillAfter(true);
+    fadeOutHalfAnim.setFillEnabled(true);
+    fadeInHalfAnim.setDuration(500);
+    fadeInHalfAnim.setFillAfter(true);
+    fadeInHalfAnim.setFillEnabled(true);
+    fadeOutAnim.setDuration(500);
+    fadeOutAnim.setFillAfter(true);
+    fadeOutAnim.setFillEnabled(true);
+    fadeInAnim.setDuration(500);
+    fadeInAnim.setFillAfter(true);
+    fadeInAnim.setFillEnabled(true);
   }
 }
