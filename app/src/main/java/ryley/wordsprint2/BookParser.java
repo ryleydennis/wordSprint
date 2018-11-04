@@ -4,8 +4,16 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.location.Location;
 import android.net.Uri;
+import android.os.Environment;
+
+import com.github.mertakdut.BookSection;
+import com.github.mertakdut.Reader;
+import com.github.mertakdut.exception.OutOfPagesException;
+import com.github.mertakdut.exception.ReadingException;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -18,59 +26,55 @@ public class BookParser {
 
   BookParser(Context context)
   {
-
     mContext=context;
   }
-  protected List<String[]> parse (String location) throws IOException {
 
-    List<String[]> unformattedText = new ArrayList<>();
+  protected List<String[]> parse (String location) throws IOException, ReadingException, OutOfPagesException {
 
-    AssetManager am = mContext.getAssets();
+    int pageIndex = 0;
 
-    try {
+    File file = getFileFromAssets(location);
 
-      InputStream is = mContext.getAssets().open("PrideAndPrejudiceChapter7.html");
-      BufferedReader reader = new BufferedReader((new InputStreamReader(is)));
-      String line;
+    Reader reader = new Reader();
+    reader.setMaxContentPerSection(1000000000);
+    reader.setIsIncludingTextContent(true);
+    reader.setFullContent(file.getPath());
+    reader.setIsOmittingTitleTag(true);
 
-      int loopTest1 = 0;
+    List<String[]> parsedBook = new ArrayList<>();
+    for(int i = 0; i < 10; i++) {
+      BookSection bookSection = reader.readSection(i);
+      String sectionContent = bookSection.getSectionTextContent();
+
+      String[] parsedSection =  sectionContent.split("\\s+");
 
 
-      while ((line = reader.readLine()) != null)
-      {
-
-
-        boolean isValidLine = false;
-
-        if(line.indexOf("title") != -1) isValidLine = true;
-        //if(line.indexOf("div") != -1) isValidLine = true;
-        if(line.indexOf("span") != -1) isValidLine = true;
-
-        if(isValidLine)
-        {
-          while(line.indexOf(">") != -1) {
-
-            int startLoc = line.indexOf(">");
-            int endLoc = line.lastIndexOf("<");
-
-            if(endLoc > startLoc+1)
-            {
-              line = line.substring(startLoc+1, endLoc);
-
-            }
-            else{
-              line = "";
-            }
-          }
-          if(!(line.isEmpty())){
-            unformattedText.add(line.split(" "));
-          }
-        }
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
+      parsedBook.add(parsedSection);
     }
-    return unformattedText;
+
+    return parsedBook;
+  }
+
+  public File getFileFromAssets(String fileName) {
+
+    File file = new File(mContext.getCacheDir() + "/" + fileName);
+
+    if (!file.exists()) try {
+
+      InputStream is = mContext.getAssets().open(fileName);
+      int size = is.available();
+      byte[] buffer = new byte[size];
+      is.read(buffer);
+      is.close();
+
+      FileOutputStream fos = new FileOutputStream(file);
+      fos.write(buffer);
+      fos.close();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    return file;
   }
 
 }

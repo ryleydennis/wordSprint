@@ -8,6 +8,10 @@ import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.github.mertakdut.exception.OutOfPagesException;
+import com.github.mertakdut.exception.ReadingException;
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.List;
 
@@ -40,17 +44,20 @@ public class ReaderView extends AppCompatActivity {
     wpmSlider = findViewById(R.id.seekBar);
     wpmTextView = findViewById(R.id.WPM_Textview);
 
-    setUpPlayButton();
-    setUpSeekBar();
-
-
     BookParser bookparser = new BookParser(this);
 
     try {
-      parsedBook = new Book(bookparser.parse("Doesn't matter right now"));
-    } catch (IOException e) {
+      parsedBook = new Book(bookparser.parse("PrideandPrejudice.epub"));
+    } catch (IOException | ReadingException | OutOfPagesException e) {
       e.printStackTrace();
     }
+
+    parsedBook.getParsedBook().remove(0);
+    parsedBook.getParsedBook().remove(0);
+
+
+    setUpPlayButton();
+    setUpSeekBar();
 
   }
 
