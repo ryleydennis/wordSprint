@@ -145,7 +145,12 @@
         android:id="@+id/ui_group"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/ui_background"
         app:layout_constraintBottom_toBottomOf="parent">
+
+
 
         <Button
             android:id="@+id/play_button"

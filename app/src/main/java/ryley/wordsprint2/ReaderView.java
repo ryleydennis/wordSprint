@@ -78,7 +78,7 @@ public class ReaderView extends AppCompatActivity {
       e.printStackTrace();
     }
 
-    //TODO find better way to remove intro chapters
+    //TODO save place instead of deleting this intro chapters
     parsedBook.getParsedBook().remove(0);
     parsedBook.getParsedBook().remove(0);
 
@@ -131,14 +131,12 @@ public class ReaderView extends AppCompatActivity {
   private void stopPlayer(){
     if(isPlaying){
       playerTimer.cancel();
-      playButton.setBackgroundResource(R.drawable.ic_play_arrow);
-      playButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
       uiGroup.startAnimation(fadeInHalfAnim);
+      changeButtonVisuals(true);
       wordTrack.bringToFront();
       updatePreviewGroups();
       previewGroupTop.startAnimation(fadeInAnim);
       previewGroupBottom.startAnimation(fadeInAnim);
-
       isPlaying = false;
     }
   }
@@ -146,17 +144,35 @@ public class ReaderView extends AppCompatActivity {
   private void startPlayer(){
     if(!isPlaying){
       setUpTimer(parsedBook, wordPosition, sectionPosition, wpmInMilli);
+      changeButtonVisuals(false);
       playerTimer.start();
-      wordTrack.bringToFront();
-      playButton.setBackgroundResource(R.drawable.ic_pause_button);
-      playButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
       uiGroup.startAnimation(fadeOutHalfAnim);
+      wordTrack.bringToFront();
       previewGroupTop.startAnimation(fadeOutAnim);
       previewGroupBottom.startAnimation(fadeOutAnim);
       isPlaying = true;
     }
   }
 
+
+    private void changeButtonVisuals(boolean isHighlighted){
+      if(isHighlighted){
+        playButton.setBackgroundResource(R.drawable.ic_play_arrow);
+        playButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+        skipNextButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+        skipBackButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+        ff_Button.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+        rw_Button.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+      }
+      else{
+        playButton.setBackgroundResource(R.drawable.ic_pause_button);
+        playButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+        skipNextButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+        skipBackButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+        ff_Button.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+        rw_Button.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+      }
+    }
 
   private void setUpButtons(){
     playButton.setOnClickListener( v -> {
@@ -181,14 +197,13 @@ public class ReaderView extends AppCompatActivity {
     });
 
     skipBackButton.setOnClickListener( v -> {
-      if(sectionPosition > 0) {
-
-        if(wordPosition != 0){
-          wordPosition = 0;
-        }
-        else{
-          sectionPosition--;
-        }
+      if(wordPosition > 0){
+        wordPosition = 0;
+        updatePreviewGroups();
+        updateWordTrack();
+      }
+      else if(sectionPosition > 0){
+       sectionPosition--;
         updatePreviewGroups();
         updateWordTrack();
       }
@@ -211,6 +226,11 @@ public class ReaderView extends AppCompatActivity {
     rw_Button.setOnClickListener( v -> {
       if(wordPosition >= 5) {
         wordPosition = wordPosition - 5;
+        updatePreviewGroups();
+        updateWordTrack();
+      }
+      else if(wordPosition > 0){
+        wordPosition = 0;
         updatePreviewGroups();
         updateWordTrack();
       }
