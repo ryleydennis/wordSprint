@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">wordSprint2</string>
+    <string name="loading">Loading...</string>
+    <string name="wpm_min">50</string>
+    <string name="wpm_max">500</string>
+    <string name="wpm_mid">300</string>
+    <string name="press_play_to_begin">Press Play To Begin...</string>
 </resources>

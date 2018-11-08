@@ -7,20 +7,30 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.github.mertakdut.exception.OutOfPagesException;
-import com.github.mertakdut.exception.ReadingException;
+import com.github.mertakdut.BookSection;
 
-import java.io.IOException;
-import java.util.List;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.Observer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 
 public class ReaderView extends AppCompatActivity {
 
+  BookParser bookparser = new BookParser(this);
+  String[] currentSection = new String[0];
 
   Button skipNextButton;
   Button skipBackButton;
@@ -35,6 +45,9 @@ public class ReaderView extends AppCompatActivity {
   ConstraintLayout previewGroupTop;
   ConstraintLayout previewGroupBottom;
 
+  ProgressBar progressBar;
+  ImageView progressBackground;
+
   TextView wordTrack;
   TextView wordPreview1;
   TextView wordPreview2;
@@ -45,6 +58,8 @@ public class ReaderView extends AppCompatActivity {
   TextView wordPreview7;
   TextView wordPreview8;
 
+  boolean userIsWaiting = true;
+  boolean isParsing = false;
   boolean isPlaying = false;
   int sectionPosition = 0;
   int wordPosition = 0;
@@ -68,25 +83,13 @@ public class ReaderView extends AppCompatActivity {
     Intent intent = getIntent();
     String bookLoc = intent.getStringExtra("BOOK");
 
-
-
-    BookParser bookparser = new BookParser(this);
-
-    try {
-      parsedBook = new Book(bookparser.parse("PrideandPrejudice.epub"));
-    } catch (IOException | ReadingException | OutOfPagesException e) {
-      e.printStackTrace();
-    }
-
-    //TODO save place instead of deleting this intro chapters
-    parsedBook.getParsedBook().remove(0);
-    parsedBook.getParsedBook().remove(0);
-
     bindViews();
+
+    parsedBook = new Book();
+    parseBookAsync("PrideandPrejudice.epub");
     setUpButtons();
     setUpSeekBar();
     initAnimations();
-    updatePreviewGroups();
   }
 
   private void setUpSeekBar(){
@@ -128,13 +131,32 @@ public class ReaderView extends AppCompatActivity {
     );
   }
 
+  private void fadeInLoading(){
+    wordTrack.setText(R.string.loading);
+    progressBar.setVisibility(View.VISIBLE);
+    progressBackground.setVisibility(View.VISIBLE);
+    progressBar.startAnimation(fadeInAnim);
+    progressBackground.startAnimation(fadeInAnim);
+  }
+
+  private void fadeOutLoading(){
+    try {
+      currentSection = parsedBook.getSection(sectionPosition);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    updateWords();
+    progressBackground.animate().alpha(0).setDuration(600).withEndAction(() -> progressBackground.setVisibility(View.GONE));
+    progressBar.animate().alpha(0).setDuration(600).withEndAction(() -> progressBar.setVisibility(View.GONE));
+  }
+
   private void stopPlayer(){
     if(isPlaying){
       playerTimer.cancel();
       uiGroup.startAnimation(fadeInHalfAnim);
       changeButtonVisuals(true);
       wordTrack.bringToFront();
-      updatePreviewGroups();
+      updateWords();
       previewGroupTop.startAnimation(fadeInAnim);
       previewGroupBottom.startAnimation(fadeInAnim);
       isPlaying = false;
@@ -185,11 +207,10 @@ public class ReaderView extends AppCompatActivity {
     });
 
     skipNextButton.setOnClickListener( v -> {
-      if(parsedBook.getParsedBook().size() > sectionPosition) {
+      if(parsedBook.getBookSize() > sectionPosition) {
         sectionPosition++;
         wordPosition = 0;
-        updatePreviewGroups();
-        updateWordTrack();
+        updateWords();
       }
       else{
         Toast.makeText(this, "End of Book", Toast.LENGTH_SHORT).show();
@@ -199,13 +220,11 @@ public class ReaderView extends AppCompatActivity {
     skipBackButton.setOnClickListener( v -> {
       if(wordPosition > 0){
         wordPosition = 0;
-        updatePreviewGroups();
-        updateWordTrack();
+        updateWords();
       }
       else if(sectionPosition > 0){
        sectionPosition--;
-        updatePreviewGroups();
-        updateWordTrack();
+        updateWords();
       }
       else{
         Toast.makeText(this, "Beginning of Book", Toast.LENGTH_SHORT).show();
@@ -213,10 +232,9 @@ public class ReaderView extends AppCompatActivity {
     });
 
     ff_Button.setOnClickListener( v -> {
-      if(parsedBook.getParsedBook().get(sectionPosition).length >= (wordPosition + 5)) {
+      if(currentSection.length >= (wordPosition + 5)) {
         wordPosition = wordPosition + 5;
-        updatePreviewGroups();
-        updateWordTrack();
+        updateWords();
       }
       else{
         Toast.makeText(this, "End of Section", Toast.LENGTH_SHORT).show();
@@ -226,13 +244,11 @@ public class ReaderView extends AppCompatActivity {
     rw_Button.setOnClickListener( v -> {
       if(wordPosition >= 5) {
         wordPosition = wordPosition - 5;
-        updatePreviewGroups();
-        updateWordTrack();
+        updateWords();
       }
       else if(wordPosition > 0){
         wordPosition = 0;
-        updatePreviewGroups();
-        updateWordTrack();
+        updateWords();
       }
       else{
         Toast.makeText(this, "Beginning of Section", Toast.LENGTH_SHORT).show();
@@ -242,43 +258,46 @@ public class ReaderView extends AppCompatActivity {
 
   }
 
-  private void updateWordTrack(){
-    if(wordPosition == 0){
-      wordTrack.setText("Press Play To Begin...");
-    }
-    else{
-    wordTrack.setText(parsedBook.getParsedBook().get(sectionPosition)[wordPosition]);
+  private void updateWords(){
+    try {
+      currentSection = parsedBook.getSection(sectionPosition);
+
+      if(wordPosition <= 0){
+        wordTrack.setText(R.string.press_play_to_begin);
+      }
+      else{
+        wordTrack.setText(currentSection[wordPosition]);
+      }
+
+      if(wordPosition > 3) fillInPreviewText(wordPreview1, wordPosition - 4);
+      else wordPreview1.setText("");
+      if(wordPosition > 2) fillInPreviewText(wordPreview2, wordPosition - 3);
+      else wordPreview2.setText("");
+      if(wordPosition > 1) fillInPreviewText(wordPreview3, wordPosition - 2);
+      else wordPreview3.setText("");
+      if(wordPosition > 0) fillInPreviewText(wordPreview4, wordPosition - 1);
+      else wordPreview4.setText("");
+
+      int remainingWords = currentSection.length - wordPosition;
+      //If haven't started, show first word in preview instead of second
+      int startBuffer = (wordPosition == 0 ? -1 : 0);
+
+      if(remainingWords > 0) fillInPreviewText(wordPreview5, wordPosition + 1 + startBuffer);
+      else wordPreview5.setText("");
+      if(remainingWords > 1) fillInPreviewText(wordPreview6, wordPosition + 2 + startBuffer);
+      else wordPreview6.setText("");
+      if(remainingWords > 2) fillInPreviewText(wordPreview7, wordPosition + 3 + startBuffer);
+      else wordPreview7.setText("");
+      if(remainingWords > 3) fillInPreviewText(wordPreview8, wordPosition + 4 + startBuffer);
+      else wordPreview8.setText("");
+
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
-
-  private void updatePreviewGroups(){
-
-    if(wordPosition > 3) fillInPreviewText(wordPreview1, wordPosition - 4);
-    else wordPreview1.setText("");
-    if(wordPosition > 2) fillInPreviewText(wordPreview2, wordPosition - 3);
-    else wordPreview2.setText("");
-    if(wordPosition > 1) fillInPreviewText(wordPreview3, wordPosition - 2);
-    else wordPreview3.setText("");
-    if(wordPosition > 0) fillInPreviewText(wordPreview4, wordPosition - 1);
-    else wordPreview4.setText("");
-
-    int remainingWords = parsedBook.getParsedBook().get(sectionPosition).length - wordPosition;
-    //If haven't started, show first word in preview instead of second
-    int startBuffer = (wordPosition == 0 ? -1 : 0);
-
-    if(remainingWords > 0) fillInPreviewText(wordPreview5, wordPosition + 1 + startBuffer);
-    else wordPreview5.setText("");
-    if(remainingWords > 1) fillInPreviewText(wordPreview6, wordPosition + 2 + startBuffer);
-    else wordPreview6.setText("");
-    if(remainingWords > 2) fillInPreviewText(wordPreview7, wordPosition + 3 + startBuffer);
-    else wordPreview7.setText("");
-    if(remainingWords > 3) fillInPreviewText(wordPreview8, wordPosition + 4 + startBuffer);
-    else wordPreview8.setText("");
-  }
-
 
   private void fillInPreviewText(TextView preview, int position){
-    preview.setText(parsedBook.getParsedBook().get(sectionPosition)[position]);
+    preview.setText(currentSection[position]);
   }
 
   private void setUpTimer(Book parsedBook, final int wordPosition, final int linePosition, final int countDownInterval){
@@ -294,38 +313,44 @@ public class ReaderView extends AppCompatActivity {
       int warmUpTickGo = 3;
       int currentLine = linePosition;
       int currentWord = wordPosition;
-      List<String[]> parsedText = parsedBook.getParsedBook();
 
       public void onTick(long millisUntilFinished) {
 
-        //To make reading easier we're going to skip updating on some early ticks
-        if(warmUpTickGo > 0){
-          warmUpTickGo--;
+        try{
+          currentSection = parsedBook.getSection(currentLine);
+
+          //To make reading easier we're going to skip updating on some early ticks
+          if(warmUpTickGo > 0){
+            warmUpTickGo--;
+          }
+          else {
+            if (warmUpTickSkip > 0) {
+              warmUpTickSkip--;
+              warmUpTickGo = warmUpTickSkip;
+            }
+
+            wordTrack.setText(currentSection[currentWord]);
+
+            currentWord++;
+
+            if (currentWord >= (currentSection.length)) {
+              currentWord = 0;
+              currentLine++;
+            }
+
+            if (currentLine >= parsedBook.size()) {
+              cancel();
+            } else {
+              setBookPosition(currentLine, currentWord);
+            }
+          }
         }
-        else{
-          if(warmUpTickSkip > 0){
-            warmUpTickSkip--;
-            warmUpTickGo = warmUpTickSkip;
-          }
-
-          wordTrack.setText(parsedText.get(currentLine)[currentWord]);
-
-          currentWord++;
-
-          if(currentWord >= (parsedText.get(currentLine).length)) {
-            currentWord = 0;
-            currentLine++;
-          }
-
-          if(currentLine >= parsedText.size()){
-            cancel();
-          }
-
-          else{
-            setBookPosition(currentLine,currentWord);
-          }
+        catch (Exception e) {
+          e.printStackTrace();
+          playerTimer.cancel();
         }
-      }
+
+    }
 
       public void onFinish() {
 
@@ -351,6 +376,9 @@ public class ReaderView extends AppCompatActivity {
     previewGroupTop = findViewById(R.id.previewGroupTop);
     previewGroupBottom = findViewById(R.id.previewGroupBottom);
 
+    progressBar = findViewById(R.id.progress_Bar);
+    progressBackground = findViewById(R.id.progress_background);
+
     wordPreview1 = findViewById(R.id.word_preview_1);
     wordPreview2 = findViewById(R.id.word_preview_2);
     wordPreview3 = findViewById(R.id.word_preview_3);
@@ -374,5 +402,66 @@ public class ReaderView extends AppCompatActivity {
     fadeInAnim.setDuration(500);
     fadeInAnim.setFillAfter(true);
     fadeInAnim.setFillEnabled(true);
+  }
+
+  private void parseBookAsync(String location){
+
+    fadeInLoading();
+
+    Observable observableParser = Observable.create((ObservableOnSubscribe<BookSection>) e -> {
+      try{
+        while(!parsedBook.status()){
+          BookSection bookSection = bookparser.parseSection(location);
+          e.onNext(bookSection);
+        }
+      }
+      catch (Exception error)
+      {
+        e.onError(error);
+      }
+      e.onComplete();
+    });
+
+
+    Observer observer = new Observer() {
+      @Override
+      public void onSubscribe(Disposable d) {
+        isParsing = true;
+      }
+
+      @Override
+      public void onNext(Object o) {
+        parsedBook.addBookSection((BookSection) o);
+
+        String message = "Section, ";
+        if(((BookSection) o).getSectionTextContent() != null){
+          message += ((BookSection) o).getSectionTextContent().substring(0,100);
+        }
+        Log.d("RDD", message);
+
+
+        if(userIsWaiting) {
+          userIsWaiting = false;
+          fadeOutLoading();
+        }
+      }
+
+      @Override
+      public void onError(Throwable e) {
+        Log.e("RDD ERROR","Yup, it failed, " + e.getMessage());
+        parsedBook.setParsedCompleted(true);
+      }
+
+      @Override
+      public void onComplete() {
+        isParsing = false;
+      }
+    };
+
+    observableParser
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeOn(Schedulers.newThread())
+            .subscribe(observer);
+
   }
 }

@@ -24,15 +24,14 @@ import java.util.List;
 public class BookParser {
 
   private Context mContext;
+  private int currentSection = 0;
 
   BookParser(Context context)
   {
     mContext=context;
   }
 
-  protected List<String[]> parse (String location) throws IOException, ReadingException, OutOfPagesException {
-
-    int pageIndex = 0;
+  protected BookSection parseSection (String location) throws IOException, ReadingException, OutOfPagesException {
 
     File file = getFileFromAssets(location);
 
@@ -41,25 +40,18 @@ public class BookParser {
     reader.setFullContent(file.getPath());
     reader.setIsOmittingTitleTag(true);
 
-    List<String[]> parsedBook = new ArrayList<>();
-    //TODO change from 10 to get all chapters
+    BookSection bookSection = new BookSection();
+
     try{
-      for(int i = 0; i < 10; i++) {
-        BookSection bookSection = reader.readSection(i);
-        String sectionContent = bookSection.getSectionTextContent();
+      bookSection = reader.readSection(currentSection);
+      currentSection++;
 
-        String[] parsedSection =  sectionContent.split("\\s+");
-        Log.d("Parser","section " + String.valueOf(i));
-
-
-        parsedBook.add(parsedSection);
-      }
     }
     catch (OutOfPagesException e){
       Log.d("Parser","Read Entire Book");
     }
 
-    return parsedBook;
+    return bookSection;
   }
 
   public File getFileFromAssets(String fileName) {
@@ -83,5 +75,4 @@ public class BookParser {
 
     return file;
   }
-
 }

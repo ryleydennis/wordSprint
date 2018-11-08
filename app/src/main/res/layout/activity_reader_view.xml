@@ -8,6 +8,7 @@
     android:background="#000"
     tools:context=".ReaderView">
 
+
     <android.support.constraint.ConstraintLayout
         android:id="@+id/word_group"
         android:layout_width="wrap_content"
@@ -32,7 +33,6 @@
                 android:id="@+id/word_preview_1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="wordy"
                 android:textColor="@color/light_gray"
                 app:layout_constraintBottom_toTopOf="@id/word_preview_2"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -42,7 +42,6 @@
                 android:id="@+id/word_preview_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="wordy"
                 android:textColor="@color/light_gray"
 
                 app:layout_constraintBottom_toTopOf="@id/word_preview_3"
@@ -53,7 +52,7 @@
                 android:id="@+id/word_preview_3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="wordy"
+
                 android:textColor="@color/light_gray"
                 app:layout_constraintBottom_toTopOf="@id/word_preview_4"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -64,7 +63,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="6dp"
-                android:text="wordy"
                 android:textColor="@color/light_gray"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -88,7 +86,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="wordy"
                 android:textColor="@color/light_gray"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -98,7 +95,6 @@
                 android:id="@+id/word_preview_6"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="wordy"
                 android:textColor="@color/light_gray"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -108,7 +104,6 @@
                 android:id="@+id/word_preview_7"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="wordy"
                 android:textColor="@color/light_gray"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -118,7 +113,6 @@
                 android:id="@+id/word_preview_8"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="wordy"
                 android:textColor="@color/light_gray"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -131,7 +125,7 @@
             android:id="@+id/wordTrackView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Press Play To Begin..."
+            android:text="@string/loading"
             android:textColor="@color/pure_white"
             android:textSize="20sp"
             app:layout_constraintTop_toBottomOf="@id/previewGroupTop"
@@ -208,7 +202,6 @@
             android:id="@+id/seekBar"
             android:layout_width="0dp"
             android:layout_height="31dp"
-            android:layout_marginBottom="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -220,7 +213,7 @@
             android:layout_height="wrap_content"
             android:paddingEnd="32dp"
             android:paddingStart="32dp"
-            android:text="50"
+            android:text="@string/wpm_min"
             android:textColor="@color/light_gray"
             app:layout_constraintBottom_toTopOf="@id/seekBar"
             app:layout_constraintStart_toStartOf="@id/seekBar"
@@ -231,7 +224,7 @@
             android:layout_height="wrap_content"
             android:paddingEnd="32dp"
             android:paddingStart="32dp"
-            android:text="500"
+            android:text="@string/wpm_max"
             android:textColor="@color/light_gray"
             app:layout_constraintBottom_toTopOf="@id/seekBar"
             app:layout_constraintEnd_toEndOf="@id/seekBar"
@@ -242,7 +235,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingBottom="8dp"
-            android:text="300"
+            android:text="@string/wpm_mid"
             android:textColor="@color/pure_white"
             android:textSize="16sp"
             app:layout_constraintBottom_toTopOf="@id/seekBar"
@@ -251,6 +244,26 @@
             />
 
     </android.support.constraint.ConstraintLayout>
+    
+    <ImageView
+        android:id="@+id/progress_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/ic_square"
+        android:backgroundTint="@color/transparent_gray"
+        android:visibility="gone"
+        />
+
+    <ProgressBar
+        android:id="@+id/progress_Bar"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:visibility="gone"/>
 
 
 </android.support.constraint.ConstraintLayout>
