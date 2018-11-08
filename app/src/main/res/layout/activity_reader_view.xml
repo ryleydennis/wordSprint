@@ -252,6 +252,8 @@
         android:background="@drawable/ic_square"
         android:backgroundTint="@color/transparent_gray"
         android:visibility="gone"
+        android:focusable="true"
+        android:clickable="true"
         />
 
     <ProgressBar

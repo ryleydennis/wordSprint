@@ -16,7 +16,7 @@ public class Book {
     parsedBook.add(parsedSection);
   }
 
-  public int getBookSize(){
+  public int numOfSections(){
     return parsedBook.size();
   }
 
@@ -29,15 +29,11 @@ public class Book {
     }
   }
 
-  public long size(){
-    return size;
-  }
-
   public void setParsedCompleted(boolean completed){
     parseCompleted = completed;
   }
 
-  public boolean status(){
+  public boolean isCompleted(){
     return parseCompleted;
   }
 

@@ -20,7 +20,6 @@ import android.widget.Toast;
 import com.github.mertakdut.BookSection;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -69,6 +68,8 @@ public class ReaderView extends AppCompatActivity {
   final int ONE_WPM = 60000;
   final int DEFAULT_WPM = 300;
 
+  String bookLoc = "";
+
   AlphaAnimation fadeOutHalfAnim = new AlphaAnimation(1.0f, 0.5f);
   AlphaAnimation fadeInHalfAnim = new AlphaAnimation(0.5f, 1.0f);
 
@@ -81,15 +82,18 @@ public class ReaderView extends AppCompatActivity {
     setContentView(R.layout.activity_reader_view);
 
     Intent intent = getIntent();
-    String bookLoc = intent.getStringExtra("BOOK");
+    bookLoc = intent.getStringExtra("BOOK");
+    bookLoc = "PrideandPrejudice.epub";
 
     bindViews();
 
-    parsedBook = new Book();
-    parseBookAsync("PrideandPrejudice.epub");
-    setUpButtons();
-    setUpSeekBar();
-    initAnimations();
+    if(parsedBook == null){
+      parsedBook = new Book();
+      parseBookAsync(bookLoc);
+      setUpButtons();
+      initAnimations();
+      setUpSeekBar();
+    }
   }
 
   private void setUpSeekBar(){
@@ -135,8 +139,8 @@ public class ReaderView extends AppCompatActivity {
     wordTrack.setText(R.string.loading);
     progressBar.setVisibility(View.VISIBLE);
     progressBackground.setVisibility(View.VISIBLE);
-    progressBar.startAnimation(fadeInAnim);
-    progressBackground.startAnimation(fadeInAnim);
+    progressBar.animate().alpha(1).setDuration(100);
+    progressBackground.animate().alpha(1).setDuration(100);
   }
 
   private void fadeOutLoading(){
@@ -177,24 +181,24 @@ public class ReaderView extends AppCompatActivity {
   }
 
 
-    private void changeButtonVisuals(boolean isHighlighted){
-      if(isHighlighted){
-        playButton.setBackgroundResource(R.drawable.ic_play_arrow);
-        playButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
-        skipNextButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
-        skipBackButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
-        ff_Button.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
-        rw_Button.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
-      }
-      else{
-        playButton.setBackgroundResource(R.drawable.ic_pause_button);
-        playButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
-        skipNextButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
-        skipBackButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
-        ff_Button.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
-        rw_Button.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
-      }
+  private void changeButtonVisuals(boolean isHighlighted){
+    if(isHighlighted){
+      playButton.setBackgroundResource(R.drawable.ic_play_arrow);
+      playButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+      skipNextButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+      skipBackButton.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+      ff_Button.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
+      rw_Button.setBackgroundTintList(getResources().getColorStateList(R.color.play_color, getTheme()));
     }
+    else{
+      playButton.setBackgroundResource(R.drawable.ic_pause_button);
+      playButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+      skipNextButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+      skipBackButton.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+      ff_Button.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+      rw_Button.setBackgroundTintList(getResources().getColorStateList(R.color.pause_color, getTheme()));
+    }
+  }
 
   private void setUpButtons(){
     playButton.setOnClickListener( v -> {
@@ -207,14 +211,7 @@ public class ReaderView extends AppCompatActivity {
     });
 
     skipNextButton.setOnClickListener( v -> {
-      if(parsedBook.getBookSize() > sectionPosition) {
-        sectionPosition++;
-        wordPosition = 0;
-        updateWords();
-      }
-      else{
-        Toast.makeText(this, "End of Book", Toast.LENGTH_SHORT).show();
-      }
+      nextSection();
     });
 
     skipBackButton.setOnClickListener( v -> {
@@ -223,7 +220,7 @@ public class ReaderView extends AppCompatActivity {
         updateWords();
       }
       else if(sectionPosition > 0){
-       sectionPosition--;
+        prevSection();
         updateWords();
       }
       else{
@@ -237,6 +234,7 @@ public class ReaderView extends AppCompatActivity {
         updateWords();
       }
       else{
+        nextSection();
         Toast.makeText(this, "End of Section", Toast.LENGTH_SHORT).show();
       }
     });
@@ -256,6 +254,35 @@ public class ReaderView extends AppCompatActivity {
     });
 
 
+  }
+
+  private void nextSection(){
+
+    wordPosition = 0;
+
+    //if reaching end of cached sections cache more of it
+    if(sectionPosition >= (parsedBook.numOfSections() - 1) && !parsedBook.isCompleted()){
+      if(sectionPosition == parsedBook.numOfSections()){
+        userIsWaiting = true;
+        fadeInLoading();
+      }
+      if(!isParsing){
+        parseBookAsync(bookLoc);
+      }
+    }
+    //only move to next section if it exists
+    if(sectionPosition < parsedBook.numOfSections()){
+      sectionPosition++;
+    }
+    else if (sectionPosition >= (parsedBook.numOfSections()) && parsedBook.isCompleted()){
+      Toast.makeText(this, "End of Book", Toast.LENGTH_SHORT).show();
+    }
+
+    updateWords();
+  }
+
+  private void prevSection(){
+    sectionPosition--;
   }
 
   private void updateWords(){
@@ -304,7 +331,13 @@ public class ReaderView extends AppCompatActivity {
 
     //warm up buffer = 3 + 2 + 1
     final int WARM_UP_BUFFER = 6;
-    long timerLength = parsedBook.size() + WARM_UP_BUFFER * countDownInterval;
+    long timerLength = 0;
+    try {
+      timerLength = parsedBook.getSection(linePosition).length + WARM_UP_BUFFER * countDownInterval;
+    } catch (Exception e) {
+      timerLength = 0;
+      //TODO toast error
+    }
 
 
     playerTimer = new CountDownTimer(timerLength, countDownInterval) {
@@ -338,8 +371,8 @@ public class ReaderView extends AppCompatActivity {
               currentLine++;
             }
 
-            if (currentLine >= parsedBook.size()) {
-              cancel();
+            if (currentLine >= parsedBook.numOfSections()) {
+              onFinish();
             } else {
               setBookPosition(currentLine, currentWord);
             }
@@ -353,7 +386,7 @@ public class ReaderView extends AppCompatActivity {
     }
 
       public void onFinish() {
-
+        nextSection();
       }
     };
   }
@@ -406,14 +439,20 @@ public class ReaderView extends AppCompatActivity {
 
   private void parseBookAsync(String location){
 
-    fadeInLoading();
+    if(userIsWaiting){
+      fadeInLoading();
+    }
 
     Observable observableParser = Observable.create((ObservableOnSubscribe<BookSection>) e -> {
+      //need a local copy to protect against async shenanigans
+      int sectionPosition = this.sectionPosition;
+
       try{
-        while(!parsedBook.status()){
+        do{
           BookSection bookSection = bookparser.parseSection(location);
           e.onNext(bookSection);
         }
+        while(bookparser.getCurrentSection() < (sectionPosition + 5));
       }
       catch (Exception error)
       {

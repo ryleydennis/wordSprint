@@ -54,6 +54,10 @@ public class BookParser {
     return bookSection;
   }
 
+  public int getCurrentSection(){
+    return currentSection;
+  }
+
   public File getFileFromAssets(String fileName) {
 
     File file = new File(mContext.getCacheDir() + "/" + fileName);
