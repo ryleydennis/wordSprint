@@ -96,6 +96,12 @@ public class ReaderView extends AppCompatActivity {
     }
   }
 
+  @Override
+  protected void onStop(){
+      super.onStop();
+      parsedBook = null;
+  }
+
   private void setUpSeekBar(){
     wpmSlider.getProgressDrawable().setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN);
     wpmSlider.getThumb().setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN);
@@ -128,7 +134,7 @@ public class ReaderView extends AppCompatActivity {
           public void onProgressChanged(SeekBar seekBar, int progress,
                                         boolean fromUser)
           {
-            wpmTextView.setText(String.valueOf(progress + 50));
+            wpmTextView.setText(String.valueOf(progress + SEEK_BAR_PADDING));
             wpmInMilli = ONE_WPM / (progress + SEEK_BAR_PADDING);
           }
         }
@@ -327,68 +333,60 @@ public class ReaderView extends AppCompatActivity {
     preview.setText(currentSection[position]);
   }
 
-  private void setUpTimer(Book parsedBook, final int wordPosition, final int linePosition, final int countDownInterval){
-
-    //warm up buffer = 3 + 2 + 1
-    final int WARM_UP_BUFFER = 6;
-    long timerLength = 0;
-    try {
-      timerLength = parsedBook.getSection(linePosition).length + WARM_UP_BUFFER * countDownInterval;
-    } catch (Exception e) {
-      timerLength = 0;
-      //TODO toast error
-    }
+  private void setUpTimer(Book parsedBook, final int wordPosition, final int sectionPos, final int countDownInterval){
 
 
-    playerTimer = new CountDownTimer(timerLength, countDownInterval) {
+      try {
+          currentSection = parsedBook.getSection(sectionPos);
 
-      int warmUpTickSkip = 3;
-      int warmUpTickGo = 3;
-      int currentLine = linePosition;
-      int currentWord = wordPosition;
+      /*
+      3 + 3 + 3 + 3
+      2 + 2 + 2 + 2
+      1 + 1 + 1 + 1 = 24
+       */
+          final int stages = 3;
+          final int skips = 3;
+          final int WARM_UP_BUFFER = 24;
+          long timerLength = 0;
 
-      public void onTick(long millisUntilFinished) {
+          timerLength = (parsedBook.getSection(sectionPos).length + WARM_UP_BUFFER) * countDownInterval;
 
-        try{
-          currentSection = parsedBook.getSection(currentLine);
+          playerTimer = new CountDownTimer(timerLength, countDownInterval) {
 
-          //To make reading easier we're going to skip updating on some early ticks
-          if(warmUpTickGo > 0){
-            warmUpTickGo--;
-          }
-          else {
-            if (warmUpTickSkip > 0) {
-              warmUpTickSkip--;
-              warmUpTickGo = warmUpTickSkip;
-            }
+              int currentWord = wordPosition;
+              WarmUpSkips warmUp = new WarmUpSkips(3,4);
 
-            wordTrack.setText(currentSection[currentWord]);
+              public void onTick(long millisUntilFinished) {
 
-            currentWord++;
+                  //To make reading easier we're going to skip updating on some early ticks
+                  if (!warmUp.shouldSkip()) {
+                      wordTrack.setText(currentSection[currentWord]);
+                      currentWord++;
+                      setBookPosition(sectionPos, currentWord);
 
-            if (currentWord >= (currentSection.length)) {
-              currentWord = 0;
-              currentLine++;
-            }
+                      if (currentWord > (currentSection.length)) {
+                          onFinish();
+                      }
+                  }
 
-            if (currentLine >= parsedBook.numOfSections()) {
-              onFinish();
-            } else {
-              setBookPosition(currentLine, currentWord);
-            }
-          }
-        }
-        catch (Exception e) {
+
+              }
+
+              public void onFinish() {
+                  stopPlayer();
+                  nextSection();
+              }
+          };
+
+      } catch (Exception e) {
           e.printStackTrace();
-          playerTimer.cancel();
-        }
-
-    }
-
-      public void onFinish() {
-        nextSection();
+          Toast.makeText(ReaderView.this, "Error reading text", Toast.LENGTH_SHORT).show();
+          stopPlayer();
+          stopPlayer();
       }
-    };
+
+
+
   }
 
   private void setBookPosition(int linePosition, int wordPosition){
